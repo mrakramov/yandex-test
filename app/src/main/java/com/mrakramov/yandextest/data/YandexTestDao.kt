@@ -1,7 +1,6 @@
 package com.mrakramov.yandextest.data
 
 import androidx.room.Dao
-import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
@@ -14,6 +13,10 @@ interface LocationDao {
 
     @Query("SELECT * FROM locationentity")
     fun loadLocations(): Flow<List<LocationEntity>>
+
+    @Query("SELECT * FROM locationentity")
+    fun loadLocationsList(): List<LocationEntity>
+
 
     @Query("SELECT * FROM locationentity WHERE id = :id")
     suspend fun loadLocationById(id: Int): LocationEntity

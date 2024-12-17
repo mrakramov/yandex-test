@@ -89,7 +89,7 @@ class LocationFragment : Fragment() {
 
         setUpObserver()
         setUpClicks()
-        initLocation()
+//        initLocation()
 
     }
 

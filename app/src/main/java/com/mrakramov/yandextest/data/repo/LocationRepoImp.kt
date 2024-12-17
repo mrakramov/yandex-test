@@ -9,6 +9,8 @@ class LocationRepoImp(private val dao: LocationDao) : LocationRepository {
 
     override fun loadLocations(): Flow<List<LocationEntity>> = dao.loadLocations()
 
+    override fun loadLocationsList(): List<LocationEntity> = dao.loadLocationsList()
+
     override suspend fun searchLocations(text: String): List<LocationEntity> =
         dao.searchLocation(text)
 
