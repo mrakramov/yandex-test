@@ -47,7 +47,7 @@ class HomeFragment : Fragment() {
                 .setMessage("Siz rostan ham manzilni o'chirib yubormoqchimisiz ?")
                 .setPositiveButton("Albatta") { v, _ ->
                     v.dismiss()
-                    viewModel.deleteLocation(it)
+                    viewModel.deleteLocation(it.id)
                 }.setNegativeButton("Bekor qilish") { v, _ ->
                     v.dismiss()
                 }.show()
@@ -62,16 +62,13 @@ class HomeFragment : Fragment() {
     }
 
     private fun handleStateChange(state: MainScreenState) {
-
         if (state.loading) {
             binding.progress.visibility = View.VISIBLE
         } else {
             binding.progress.visibility = View.GONE
         }
 
-        if (state.list.isNotEmpty()) {
-            adapter.submitList(state.list)
-        }
+        adapter.submitList(state.list)
 
         if (!state.loading && state.list.isEmpty()) {
             binding.tvEmpty.visibility = View.VISIBLE

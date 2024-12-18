@@ -16,6 +16,7 @@ import androidx.fragment.app.viewModels
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.flowWithLifecycle
 import androidx.lifecycle.lifecycleScope
+import androidx.navigation.fragment.findNavController
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
@@ -30,7 +31,9 @@ import com.mrakramov.yandextest.databinding.FavoriteBottomSheetBinding
 import com.mrakramov.yandextest.databinding.FavoriteLocationsBottomSheetBinding
 import com.mrakramov.yandextest.databinding.FragmentDashboardBinding
 import com.mrakramov.yandextest.domain.LocationEntity
+import com.mrakramov.yandextest.domain.SearchItem
 import com.mrakramov.yandextest.ui.home.adapter.LocationsListAdapter
+import com.mrakramov.yandextest.utils.parcelable
 import com.yandex.mapkit.Animation
 import com.yandex.mapkit.MapKitFactory
 import com.yandex.mapkit.geometry.Point
@@ -54,10 +57,12 @@ class LocationFragment : Fragment() {
     private var _binding: FragmentDashboardBinding? = null
     private val binding get() = _binding!!
 
-    private lateinit var fusedClient: FusedLocationProviderClient
-    private lateinit var searchManager: SearchManager
     private val viewModel: LocationViewModel by viewModels()
 
+    private lateinit var fusedClient: FusedLocationProviderClient
+    private lateinit var searchManager: SearchManager
+    private lateinit var bottomSheetDialog: BottomSheetDialog
+    private lateinit var bottomBinding: FavoriteBottomSheetBinding
 
     private val locationPermissions =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
@@ -67,9 +72,22 @@ class LocationFragment : Fragment() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+
         MapKitFactory.initialize(requireContext())
         searchManager = SearchFactory.getInstance().createSearchManager(SearchManagerType.COMBINED)
         fusedClient = LocationServices.getFusedLocationProviderClient(requireContext())
+
+        bottomSheetDialog = BottomSheetDialog(requireContext(), R.style.BottomSheetLocation)
+        bottomBinding =
+            FavoriteBottomSheetBinding.inflate(LayoutInflater.from(requireContext()), null, false)
+
+        parentFragmentManager.setFragmentResultListener("selectedLocation", this) { _, bundle ->
+            val item = bundle.parcelable<SearchItem>("location")
+            item?.let {
+                moveToLocation(Point(it.latitude, it.longitude))
+            }
+        }
+
     }
 
     override fun onCreateView(
@@ -86,7 +104,6 @@ class LocationFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-
         setUpObserver()
         setUpClicks()
 //        initLocation()
@@ -102,24 +119,29 @@ class LocationFragment : Fragment() {
             viewModel.loadLocations()
         }
 
+        binding.fabSearch.setOnClickListener {
+            findNavController().navigate(R.id.searchFragment)
+        }
     }
 
     private fun showLocations(list: List<LocationEntity>) {
-        val bottomSheetDialog = BottomSheetDialog(requireContext(), R.style.BottomSheetDialogTheme)
-        val bottomBinding = FavoriteLocationsBottomSheetBinding.inflate(
+        val bottomSearchSheetDialog =
+            BottomSheetDialog(requireContext(), R.style.BottomSheetDialogTheme)
+        val bottomSearchBinding = FavoriteLocationsBottomSheetBinding.inflate(
             LayoutInflater.from(requireContext()), null, false
         )
-        bottomSheetDialog.behavior.peekHeight = 0
-        bottomSheetDialog.behavior.state = BottomSheetBehavior.STATE_EXPANDED
+        bottomSearchSheetDialog.behavior.peekHeight = 650
+        bottomSearchSheetDialog.behavior.state = BottomSheetBehavior.STATE_EXPANDED
 
-        bottomSheetDialog.setContentView(bottomBinding.root)
+        bottomSearchSheetDialog.setContentView(bottomSearchBinding.root)
         val adapter = LocationsListAdapter {
-
+            bottomSearchSheetDialog.dismiss()
+            moveToLocation(Point(it.latitude, it.longitude))
         }
-        bottomBinding.rvLocation.adapter = adapter
+        bottomSearchBinding.rvLocation.adapter = adapter
         adapter.submitList(list)
 
-        bottomBinding.etSearch.addTextChangedListener { text ->
+        bottomSearchBinding.etSearch.addTextChangedListener { text ->
             val searchedText = text.toString()
             val filtered = list.filter {
                 it.name.lowercase().trim().contains(searchedText)
@@ -127,7 +149,7 @@ class LocationFragment : Fragment() {
             adapter.submitList(filtered)
         }
 
-        bottomSheetDialog.show()
+        bottomSearchSheetDialog.show()
     }
 
     private fun setUpObserver() {
@@ -168,7 +190,8 @@ class LocationFragment : Fragment() {
             return
         }
 
-        fusedClient.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY,
+        fusedClient.getCurrentLocation(
+            Priority.PRIORITY_HIGH_ACCURACY,
             object : CancellationToken() {
                 override fun onCanceledRequested(p0: OnTokenCanceledListener) =
                     CancellationTokenSource().token
@@ -211,9 +234,9 @@ class LocationFragment : Fragment() {
     }
 
     private fun showAddFavoriteDialog(name: String, address: String, point: Point) {
-        val bottomSheetDialog = BottomSheetDialog(requireContext(), R.style.BottomSheetDialogTheme)
-        val bottomBinding =
-            FavoriteBottomSheetBinding.inflate(LayoutInflater.from(requireContext()), null, false)
+        if (bottomSheetDialog.isShowing) {
+            bottomSheetDialog.dismiss()
+        }
         bottomSheetDialog.setContentView(bottomBinding.root)
         bottomBinding.tvName.text = name
         bottomBinding.tvAddress.text = address

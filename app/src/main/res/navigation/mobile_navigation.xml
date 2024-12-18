@@ -22,4 +22,8 @@
         android:name="com.mrakramov.yandextest.ui.profile.ProfileFragment"
         android:label="@string/title_notifications"
         tools:layout="@layout/fragment_notifications" />
+    <fragment
+        android:id="@+id/searchFragment"
+        android:name="com.mrakramov.yandextest.ui.location.SearchFragment"
+        android:label="SearchFragment" />
 </navigation>
